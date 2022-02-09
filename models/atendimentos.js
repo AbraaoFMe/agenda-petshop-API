@@ -1,13 +1,10 @@
 const { default: axios } = require('axios')
 const moment = require('moment')
-
-const conexao = require('../infraestrutura/database/conexao')
 const repositorio = require('../repositorios/atendimento')
 
 class Atendimento {
     constructor() {
         this.dataEValida = ({ data, dataCriacao }) => moment(data).isSameOrAfter(moment(dataCriacao))
-
         this.clienteEValido = ({ tamanho }) => tamanho >= 5
 
         this.valida = parametros =>
@@ -32,11 +29,9 @@ class Atendimento {
     }
 
     adiciona(atendimento) {
-        // const dataCriacao = moment().format('YYYY-MM-DD HH:MM:SS')
-        // const data = moment(atendimento.data, 'DD/MM/YYYY').format('YYYY-MM-DD HH:MM:SS')
         const dataCriacao = moment().format('YYYY-MM-DD HH:MM:SS')
         const data = moment(atendimento.data, 'DD/MM/YYYY').format('YYYY-MM-DD HH:MM:SS')
-        
+
         const parametros = {
             data: { data, dataCriacao },
             cliente: { tamanho: atendimento.cliente.length }
@@ -71,7 +66,7 @@ class Atendimento {
 
                 if (!resultado) {
                     const error = `atendimento com id ${id} not found`
-                    return new Promise((resolve, reject) => reject(error))
+                    return new Promise((resolve, reject) => reject({ error }))
                 } else {
                     return resultado
                 }
@@ -80,31 +75,16 @@ class Atendimento {
             })
     }
 
-    alterar(id, valores, res) {
-        if (valores.data) {
-            valores.data = moment(valores.data, 'DD/MM/YYYY').format('YYYY-MM-DD HH:MM:SS')
-        }
-        const sql = 'UPDATE Atendimentos SET ? WHERE id = ?'
-
-        conexao.query(sql, [valores, id], (erro, resultados) => {
-            if (erro) {
-                res.status(400).json(erro)
-            } else {
-                res.status(200).json(resultados)
-            }
-        })
+    alterar(id, valores) {
+        return repositorio.altera(id, valores)
+            .then(() => this.buscaPorId(id))
     }
 
-    deleta(id, res) {
-        const sql = 'DELETE FROM Atendimentos WHERE id = ?'
 
-        conexao.query(sql, id, (erro, resultados) => {
-            if (erro) {
-                res.status(400).json(erro)
-            } else {
-                res.status(200).json({ id })
-            }
-        })
+    deleta(id) {
+        const atendimentoApagado = this.buscaPorId(id)
+        return repositorio.deleta(id)
+            .then(() => atendimentoApagado)
     }
 }
 
